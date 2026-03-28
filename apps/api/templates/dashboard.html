@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historical Pump Scanner</title>
+  <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Historical Pump Pattern Scanner</p>
+        <h1>Research pre-pump behavior, rank live candidates, and explain every signal.</h1>
+        <p class="lede">
+          Track historical x2 events, inspect current top setups, and launch a fresh market scan
+          directly from the dashboard.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="run-scan" class="primary-button">Run Full Scan</button>
+        <a class="secondary-button" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
+      </div>
+    </section>
+
+    <section class="metrics-grid" id="summary-cards">
+      <article class="metric-card">
+        <span>Total Tickers</span>
+        <strong id="ticker-count">{{ summary.ticker_count }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Historical Pump Events</span>
+        <strong id="event-count">{{ summary.event_count }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Latest Candidates</span>
+        <strong id="candidate-count">{{ summary.latest_run_candidates }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Top Score</span>
+        <strong id="top-score">{{ "%.2f"|format(summary.top_score) }}</strong>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Latest Run</h2>
+          <span id="run-badge" class="badge">
+            {{ summary.latest_run_status or "no runs yet" }}
+          </span>
+        </div>
+        <div class="meta-list">
+          <div><span>Run ID</span><strong id="run-id">{{ summary.latest_run_id or "-" }}</strong></div>
+          <div><span>Started</span><strong id="run-started">{{ summary.latest_run_started_at or "-" }}</strong></div>
+          <div><span>Finished</span><strong id="run-finished">{{ summary.latest_run_finished_at or "-" }}</strong></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Ticker Explorer</h2>
+        </div>
+        <form id="ticker-form" class="ticker-form">
+          <input id="ticker-input" type="text" placeholder="Enter ticker, e.g. NVDA" maxlength="12">
+          <button type="submit" class="secondary-button">Load</button>
+        </form>
+        <div id="ticker-detail" class="ticker-detail empty">
+          Enter a ticker to see its stats and historical pump events.
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel wide">
+        <div class="panel-header">
+          <h2>Top Live Signals</h2>
+          <button id="refresh-signals" class="ghost-button">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Score</th>
+                <th>Similarity</th>
+                <th>Patterns</th>
+                <th>Signal Notes</th>
+              </tr>
+            </thead>
+            <tbody id="signals-body">
+              <tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Recent Runs</h2>
+        </div>
+        <div id="runs-list" class="run-list">
+          <p class="muted-text">No runs yet.</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Request failed: ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function formatDate(value) {
+      if (!value || value === "-") return "-";
+      try {
+        return new Date(value).toLocaleString();
+      } catch (_) {
+        return value;
+      }
+    }
+
+    function setSummary(summary) {
+      document.getElementById("ticker-count").textContent = summary.ticker_count ?? 0;
+      document.getElementById("event-count").textContent = summary.event_count ?? 0;
+      document.getElementById("candidate-count").textContent = summary.latest_run_candidates ?? 0;
+      document.getElementById("top-score").textContent = Number(summary.top_score ?? 0).toFixed(2);
+      document.getElementById("run-id").textContent = summary.latest_run_id ?? "-";
+      document.getElementById("run-started").textContent = formatDate(summary.latest_run_started_at);
+      document.getElementById("run-finished").textContent = formatDate(summary.latest_run_finished_at);
+      document.getElementById("run-badge").textContent = summary.latest_run_status ?? "no runs yet";
+    }
+
+    function renderSignals(rows) {
+      const tbody = document.getElementById("signals-body");
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td><button class="ticker-link" data-symbol="${row.symbol}">${row.symbol}</button></td>
+          <td>${Number(row.score).toFixed(2)}</td>
+          <td>${Number(row.similarity_score).toFixed(4)}</td>
+          <td>${row.matched_pattern_count}</td>
+          <td>
+            RV ${row.explanation_json.rv_ratio},
+            breakout ${row.explanation_json.breakout_distance}%,
+            20d ${row.explanation_json.ret_20d}%
+          </td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll(".ticker-link").forEach((button) => {
+        button.addEventListener("click", () => loadTicker(button.dataset.symbol));
+      });
+    }
+
+    function renderRuns(rows) {
+      const container = document.getElementById("runs-list");
+      if (!rows.length) {
+        container.innerHTML = '<p class="muted-text">No runs yet.</p>';
+        return;
+      }
+
+      container.innerHTML = rows.map((run) => `
+        <article class="run-item">
+          <div class="run-top">
+            <strong>Run #${run.id}</strong>
+            <span class="badge">${run.status}</span>
+          </div>
+          <p>Tickers scanned: ${run.tickers_scanned}</p>
+          <p>Candidates found: ${run.candidates_found}</p>
+          <p>Started: ${formatDate(run.started_at)}</p>
+        </article>
+      `).join("");
+    }
+
+    function renderTickerDetail(ticker, events) {
+      const container = document.getElementById("ticker-detail");
+      container.classList.remove("empty");
+
+      const eventsHtml = events.length
+        ? events.slice(0, 8).map((event) => `
+            <tr>
+              <td>${event.trigger_date}</td>
+              <td>${event.return_pct.toFixed(2)}%</td>
+              <td>${event.duration_days}</td>
+              <td>${event.event_quality_score.toFixed(1)}</td>
+            </tr>
+          `).join("")
+        : '<tr><td colspan="4" class="muted-cell">No pump events detected for this ticker yet.</td></tr>';
+
+      container.innerHTML = `
+        <div class="ticker-head">
+          <div>
+            <h3>${ticker.symbol}</h3>
+            <p>${ticker.exchange} · ${ticker.is_active ? "Active" : "Inactive"}</p>
+          </div>
+          <div class="ticker-stats">
+            <div><span>Bars</span><strong>${ticker.bar_count}</strong></div>
+            <div><span>Events</span><strong>${ticker.event_count}</strong></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trigger Date</th>
+                <th>Return</th>
+                <th>Days</th>
+                <th>Quality</th>
+              </tr>
+            </thead>
+            <tbody>${eventsHtml}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function loadSummary() {
+      const summary = await fetchJson("/api/dashboard/summary");
+      setSummary(summary);
+    }
+
+    async function loadSignals() {
+      try {
+        const rows = await fetchJson("/api/signals/top");
+        renderSignals(rows);
+      } catch (_) {
+        renderSignals([]);
+      }
+    }
+
+    async function loadRuns() {
+      try {
+        const rows = await fetchJson("/api/scan/runs");
+        renderRuns(rows);
+      } catch (_) {
+        renderRuns([]);
+      }
+    }
+
+    async function loadTicker(symbol) {
+      const normalized = symbol.trim().toUpperCase();
+      if (!normalized) return;
+      document.getElementById("ticker-input").value = normalized;
+
+      try {
+        const [ticker, events] = await Promise.all([
+          fetchJson(`/api/tickers/${normalized}`),
+          fetchJson(`/api/events/${normalized}`)
+        ]);
+        renderTickerDetail(ticker, events);
+      } catch (error) {
+        const container = document.getElementById("ticker-detail");
+        container.classList.remove("empty");
+        container.innerHTML = `<p class="error-text">Could not load ticker ${normalized}. ${error.message}</p>`;
+      }
+    }
+
+    async function runScan() {
+      const button = document.getElementById("run-scan");
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Running...";
+
+      try {
+        await fetchJson("/api/scan/run", { method: "POST" });
+        await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
+      } catch (error) {
+        alert(`Scan failed: ${error.message}`);
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+
+    document.getElementById("run-scan").addEventListener("click", runScan);
+    document.getElementById("refresh-signals").addEventListener("click", async () => {
+      await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
+    });
+    document.getElementById("ticker-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await loadTicker(document.getElementById("ticker-input").value);
+    });
+
+    Promise.all([loadSummary(), loadSignals(), loadRuns()]);
+  </script>
+</body>
+</html>
+

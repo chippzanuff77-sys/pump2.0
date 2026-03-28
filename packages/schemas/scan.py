@@ -31,3 +31,6 @@ class ScanResultRead(BaseModel):
     matched_pattern_count: int
     explanation_json: dict
 
+
+class ScanResultWithTicker(ScanResultRead):
+    symbol: str

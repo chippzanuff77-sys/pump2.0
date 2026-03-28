@@ -12,6 +12,7 @@ dependencies = [
   "alembic>=1.14.1",
   "fastapi>=0.116.1",
   "httpx>=0.28.1",
+  "jinja2>=3.1.6",
   "numpy>=2.2.6",
   "pandas>=2.3.2",
   "psycopg[binary]>=3.2.9",
@@ -34,11 +35,23 @@ dev = [
 
 [tool.setuptools]
 include-package-data = true
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["apps*", "packages*"]
-namespaces = false
+packages = [
+  "apps",
+  "apps.api",
+  "apps.api.routes",
+  "apps.worker",
+  "packages",
+  "packages.core",
+  "packages.core.backtesting",
+  "packages.core.data_providers",
+  "packages.core.event_detection",
+  "packages.core.feature_engine",
+  "packages.core.similarity",
+  "packages.db",
+  "packages.db.models",
+  "packages.schemas",
+  "packages.services",
+]
 
 [tool.ruff]
 line-length = 100
