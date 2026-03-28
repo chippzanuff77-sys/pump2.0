@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me", alias="SECRET_KEY")
     market_data_provider: str = Field(default="polygon", alias="MARKET_DATA_PROVIDER")
     polygon_api_key: str | None = Field(default=None, alias="POLYGON_API_KEY")
+    market_data_base_url: str = Field(
+        default="https://api.massive.com", alias="MARKET_DATA_BASE_URL"
+    )
     universe_limit: int = Field(default=800, alias="UNIVERSE_LIMIT")
     bar_history_years: int = Field(default=2, alias="BAR_HISTORY_YEARS")
     default_universe: str = Field(default="NVDA,TSLA,AMD,PLTR,SOFI", alias="DEFAULT_UNIVERSE")

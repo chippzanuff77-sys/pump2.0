@@ -8,11 +8,10 @@ from packages.core.data_providers.base import DailyBarProvider
 
 
 class PolygonProvider(DailyBarProvider):
-    base_url = "https://api.polygon.io"
-
     def __init__(self, api_key: str | None = None) -> None:
         settings = get_settings()
         self.api_key = api_key or settings.polygon_api_key
+        self.base_url = settings.market_data_base_url.rstrip("/")
         self.history_years = settings.bar_history_years
         self.timeout = 30.0
 
