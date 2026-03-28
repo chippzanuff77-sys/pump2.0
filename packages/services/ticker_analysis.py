@@ -12,6 +12,7 @@ from packages.db.models import DailyBar, PatternSnapshot, PumpEvent, Ticker
 @dataclass
 class SimilarCase:
     symbol: str
+    window_type: str
     trigger_date: str
     peak_date: str
     return_pct: float
@@ -70,6 +71,7 @@ def get_similar_historical_cases(
         cases.append(
             SimilarCase(
                 symbol=snapshot.ticker.symbol,
+                window_type=snapshot.window_type,
                 trigger_date=snapshot.event.trigger_date.isoformat(),
                 peak_date=snapshot.event.peak_date.isoformat(),
                 return_pct=snapshot.event.return_pct,

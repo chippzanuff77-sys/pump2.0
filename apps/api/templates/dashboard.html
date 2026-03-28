@@ -162,9 +162,19 @@
           <td>${Number(row.similarity_score).toFixed(4)}</td>
           <td>${row.matched_pattern_count}</td>
           <td>
-            RV ${row.explanation_json.rv_ratio},
-            breakout ${row.explanation_json.breakout_distance}%,
-            20d ${row.explanation_json.ret_20d}%
+            <div class="signal-note">
+              <strong>Score:</strong>
+              rule ${row.explanation_json.score_breakdown?.rule_score ?? "-"},
+              sim ${row.explanation_json.score_breakdown?.similarity_component ?? "-"}
+            </div>
+            <div class="signal-note">
+              <strong>Windows:</strong>
+              ${Object.entries(row.explanation_json.window_counts ?? {}).map(([key, value]) => `${key}(${value})`).join(", ") || "-"}
+            </div>
+            <div class="signal-note">
+              <strong>Matches:</strong>
+              ${(row.explanation_json.matched_symbols ?? []).join(", ") || "-"}
+            </div>
           </td>
         </tr>
       `).join("");

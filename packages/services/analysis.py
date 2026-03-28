@@ -7,6 +7,7 @@ from packages.core.event_detection.detector import PumpEventDetector
 from packages.core.feature_engine.extractor import FeatureExtractor
 from packages.core.similarity.scorer import FEATURE_KEYS, euclidean_similarity, rule_based_score
 from packages.db.models import DailyBar, FeatureSnapshot, PatternSnapshot, PumpEvent, ScanResult, ScanRun, Ticker
+from packages.services.bootstrap import bootstrap_universe
 from packages.services.data_ingestion import refresh_daily_bars
 
 HISTORICAL_WINDOWS = {
@@ -39,6 +40,7 @@ def get_running_scan_run(db: Session) -> ScanRun | None:
 def run_full_scan(db: Session, run: ScanRun | None = None) -> ScanRun:
     run = run or create_scan_run(db)
 
+    bootstrap_universe(db)
     tickers = db.scalars(select(Ticker).where(Ticker.is_active.is_(True))).all()
     refresh_daily_bars(db, tickers)
     try:
@@ -203,13 +205,26 @@ def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) ->
         top_scores = [score for score, _snapshot in top_matches]
         window_counts: dict[str, int] = {}
         matched_symbols: list[str] = []
+        matched_cases: list[dict] = []
         for _score, snapshot in top_matches:
             window_counts[snapshot.window_type] = window_counts.get(snapshot.window_type, 0) + 1
             if snapshot.ticker and snapshot.ticker.symbol not in matched_symbols:
                 matched_symbols.append(snapshot.ticker.symbol)
+            if snapshot.ticker and snapshot.event:
+                matched_cases.append(
+                    {
+                        "symbol": snapshot.ticker.symbol,
+                        "window_type": snapshot.window_type,
+                        "similarity": round(_score, 4),
+                        "trigger_date": snapshot.event.trigger_date.isoformat(),
+                        "return_pct": round(snapshot.event.return_pct, 2),
+                    }
+                )
 
         avg_similarity = sum(top_scores) / len(top_scores) if top_scores else 0.0
-        score = rule_based_score(features) + (avg_similarity * 10.0)
+        rule_score = rule_based_score(features)
+        similarity_component = avg_similarity * 10.0
+        score = rule_score + similarity_component
 
         db.add(
             ScanResult(
@@ -226,6 +241,12 @@ def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) ->
                     "ret_20d": round(features["ret_20d"], 4),
                     "matched_symbols": matched_symbols[:5],
                     "window_counts": window_counts,
+                    "matched_cases": matched_cases[:5],
+                    "score_breakdown": {
+                        "rule_score": round(rule_score, 4),
+                        "similarity_component": round(similarity_component, 4),
+                        "final_score": round(score, 4),
+                    },
                 },
             )
         )

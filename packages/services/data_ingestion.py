@@ -1,12 +1,20 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from packages.config import get_settings
+from packages.core.data_providers.polygon_provider import PolygonProvider
 from packages.core.data_providers.yfinance_provider import YFinanceDailyBarProvider
 from packages.db.models import DailyBar, Ticker
 
 
 def refresh_daily_bars(db: Session, tickers: list[Ticker] | None = None) -> None:
-    provider = YFinanceDailyBarProvider()
+    settings = get_settings()
+    polygon_provider = PolygonProvider()
+    provider = (
+        polygon_provider
+        if settings.market_data_provider == "polygon" and polygon_provider.is_configured()
+        else YFinanceDailyBarProvider()
+    )
     tickers = tickers or db.scalars(select(Ticker).where(Ticker.is_active.is_(True))).all()
 
     for ticker in tickers:
@@ -28,4 +36,3 @@ def refresh_daily_bars(db: Session, tickers: list[Ticker] | None = None) -> None
                 )
             )
     db.commit()
-

@@ -115,6 +115,7 @@
             <thead>
               <tr>
                 <th>Ticker</th>
+                <th>Window</th>
                 <th>Similarity</th>
                 <th>Return</th>
                 <th>Days</th>
@@ -125,13 +126,14 @@
                 {% for case in similar_cases %}
                 <tr>
                   <td><a class="ticker-link-anchor" href="/ticker/{{ case.symbol }}">{{ case.symbol }}</a></td>
+                  <td>{{ case.window_type }}</td>
                   <td>{{ "%.4f"|format(case.similarity_score) }}</td>
                   <td>{{ "%.2f"|format(case.return_pct) }}%</td>
                   <td>{{ case.duration_days }}</td>
                 </tr>
                 {% endfor %}
               {% else %}
-                <tr><td colspan="4" class="muted-cell">No similar historical cases available yet.</td></tr>
+                <tr><td colspan="5" class="muted-cell">No similar historical cases available yet.</td></tr>
               {% endif %}
             </tbody>
           </table>

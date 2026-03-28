@@ -412,6 +412,15 @@ th {
   margin: 8px 0 0;
 }
 
+.signal-note {
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+.signal-note strong {
+  color: var(--accent);
+}
+
 .muted-cell,
 .error-text {
   color: var(--muted);
