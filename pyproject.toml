@@ -36,7 +36,9 @@ dev = [
 include-package-data = true
 
 [tool.setuptools.packages.find]
+where = ["."]
 include = ["apps*", "packages*"]
+namespaces = false
 
 [tool.ruff]
 line-length = 100
@@ -45,4 +47,3 @@ target-version = "py311"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-
