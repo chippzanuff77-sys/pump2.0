@@ -6,6 +6,7 @@ from apps.api.deps import get_db
 from packages.db.models.daily_bar import DailyBar
 from packages.db.models.pump_event import PumpEvent
 from packages.db.models.ticker import Ticker
+from packages.schemas.bar import DailyBarRead
 from packages.schemas.event import PumpEventRead
 from packages.schemas.ticker import TickerDetail, TickerRead
 
@@ -56,3 +57,29 @@ def get_ticker_events(symbol: str, db: Session = Depends(get_db)) -> list[PumpEv
         .order_by(PumpEvent.trigger_date.desc())
     ).all()
     return [PumpEventRead.model_validate(event) for event in events]
+
+
+@router.get("/bars/{symbol}", response_model=list[DailyBarRead])
+def get_ticker_bars(symbol: str, limit: int = 90, db: Session = Depends(get_db)) -> list[DailyBarRead]:
+    ticker = db.scalars(select(Ticker).where(Ticker.symbol == symbol.upper())).first()
+    if ticker is None:
+        raise HTTPException(status_code=404, detail="Ticker not found.")
+
+    rows = db.scalars(
+        select(DailyBar)
+        .where(DailyBar.ticker_id == ticker.id)
+        .order_by(DailyBar.date.desc())
+        .limit(limit)
+    ).all()
+    ordered = list(reversed(rows))
+    return [
+        DailyBarRead(
+            date=row.date,
+            open=row.open,
+            high=row.high,
+            low=row.low,
+            close=row.close,
+            volume=row.volume,
+        )
+        for row in ordered
+    ]

@@ -23,7 +23,7 @@
       </div>
     </section>
 
-    <section class="metrics-grid" id="summary-cards">
+    <section class="metrics-grid">
       <article class="metric-card">
         <span>Total Tickers</span>
         <strong id="ticker-count">{{ summary.ticker_count }}</strong>
@@ -46,9 +46,7 @@
       <article class="panel">
         <div class="panel-header">
           <h2>Latest Run</h2>
-          <span id="run-badge" class="badge">
-            {{ summary.latest_run_status or "no runs yet" }}
-          </span>
+          <span id="run-badge" class="badge">{{ summary.latest_run_status or "no runs yet" }}</span>
         </div>
         <div class="meta-list">
           <div><span>Run ID</span><strong id="run-id">{{ summary.latest_run_id or "-" }}</strong></div>
@@ -66,7 +64,7 @@
           <button type="submit" class="secondary-button">Load</button>
         </form>
         <div id="ticker-detail" class="ticker-detail empty">
-          Enter a ticker to see its stats and historical pump events.
+          Enter a ticker to see its stats, recent price trend, and historical pump events.
         </div>
       </article>
     </section>
@@ -182,7 +180,41 @@
       `).join("");
     }
 
-    function renderTickerDetail(ticker, events) {
+    function buildPriceChartSvg(bars) {
+      if (!bars.length) {
+        return '<div class="muted-text">No bar history available yet.</div>';
+      }
+
+      const width = 640;
+      const height = 180;
+      const padding = 12;
+      const closes = bars.map((bar) => Number(bar.close));
+      const min = Math.min(...closes);
+      const max = Math.max(...closes);
+      const range = Math.max(max - min, 1e-9);
+
+      const points = closes.map((value, index) => {
+        const x = padding + (index * (width - padding * 2)) / Math.max(closes.length - 1, 1);
+        const y = height - padding - ((value - min) / range) * (height - padding * 2);
+        return `${x},${y}`;
+      }).join(" ");
+
+      const fillPoints = `${padding},${height - padding} ${points} ${width - padding},${height - padding}`;
+      return `
+        <svg class="mini-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Price chart">
+          <defs>
+            <linearGradient id="chartFill" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="rgba(46,196,182,0.45)" />
+              <stop offset="100%" stop-color="rgba(46,196,182,0.02)" />
+            </linearGradient>
+          </defs>
+          <polygon points="${fillPoints}" fill="url(#chartFill)"></polygon>
+          <polyline points="${points}" fill="none" stroke="#2ec4b6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      `;
+    }
+
+    function renderTickerDetail(ticker, events, bars) {
       const container = document.getElementById("ticker-detail");
       container.classList.remove("empty");
 
@@ -207,6 +239,13 @@
             <div><span>Bars</span><strong>${ticker.bar_count}</strong></div>
             <div><span>Events</span><strong>${ticker.event_count}</strong></div>
           </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-meta">
+            <span>Recent Close Trend</span>
+            <strong>${bars.length ? Number(bars[bars.length - 1].close).toFixed(2) : "-"}</strong>
+          </div>
+          ${buildPriceChartSvg(bars)}
         </div>
         <div class="table-wrap">
           <table>
@@ -253,11 +292,12 @@
       document.getElementById("ticker-input").value = normalized;
 
       try {
-        const [ticker, events] = await Promise.all([
+        const [ticker, events, bars] = await Promise.all([
           fetchJson(`/api/tickers/${normalized}`),
-          fetchJson(`/api/events/${normalized}`)
+          fetchJson(`/api/events/${normalized}`),
+          fetchJson(`/api/bars/${normalized}`)
         ]);
-        renderTickerDetail(ticker, events);
+        renderTickerDetail(ticker, events, bars);
       } catch (error) {
         const container = document.getElementById("ticker-detail");
         container.classList.remove("empty");
@@ -265,14 +305,44 @@
       }
     }
 
+    let pollingHandle = null;
+
+    async function pollLatestRun() {
+      try {
+        const latest = await fetchJson("/api/scan/latest");
+        document.getElementById("run-badge").textContent = latest.status ?? "-";
+        document.getElementById("run-id").textContent = latest.id ?? "-";
+        document.getElementById("run-started").textContent = formatDate(latest.started_at);
+        document.getElementById("run-finished").textContent = formatDate(latest.finished_at);
+        document.getElementById("candidate-count").textContent = latest.candidates_found ?? 0;
+
+        if (latest.status !== "running" && pollingHandle) {
+          window.clearInterval(pollingHandle);
+          pollingHandle = null;
+          await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
+        }
+      } catch (_) {
+      }
+    }
+
+    function startPolling() {
+      if (pollingHandle) return;
+      pollingHandle = window.setInterval(pollLatestRun, 4000);
+      pollLatestRun();
+    }
+
     async function runScan() {
       const button = document.getElementById("run-scan");
       const original = button.textContent;
       button.disabled = true;
-      button.textContent = "Running...";
+      button.textContent = "Starting...";
 
       try {
-        await fetchJson("/api/scan/run", { method: "POST" });
+        const response = await fetchJson("/api/scan/run", { method: "POST" });
+        document.getElementById("run-badge").textContent = response.status;
+        if (response.status === "running") {
+          startPolling();
+        }
         await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
       } catch (error) {
         alert(`Scan failed: ${error.message}`);
@@ -291,8 +361,7 @@
       await loadTicker(document.getElementById("ticker-input").value);
     });
 
-    Promise.all([loadSummary(), loadSignals(), loadRuns()]);
+    Promise.all([loadSummary(), loadSignals(), loadRuns()]).then(pollLatestRun);
   </script>
 </body>
 </html>
-

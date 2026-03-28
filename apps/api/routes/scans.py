@@ -1,35 +1,57 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
+from packages.db.session import SessionLocal
 from packages.db.models.scan_result import ScanResult
 from packages.db.models.scan_run import ScanRun
 from packages.db.models.ticker import Ticker
 from packages.schemas.scan import (
-    ScanResultRead,
     ScanResultWithTicker,
     ScanRunRead,
     TriggerScanResponse,
 )
-from packages.services.analysis import run_full_scan
+from packages.services.analysis import (
+    create_scan_run,
+    get_latest_scan_run,
+    get_running_scan_run,
+    run_full_scan,
+)
 
 router = APIRouter(tags=["scans"])
 
 
+def _run_scan_in_background(run_id: int) -> None:
+    with SessionLocal() as db:
+        run = db.get(ScanRun, run_id)
+        if run is None:
+            return
+        run_full_scan(db, run=run)
+
+
 @router.post("/scan/run", response_model=TriggerScanResponse)
-def trigger_scan(db: Session = Depends(get_db)) -> TriggerScanResponse:
-    run = run_full_scan(db)
+def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> TriggerScanResponse:
+    running = get_running_scan_run(db)
+    if running is not None:
+        return TriggerScanResponse(
+            run_id=running.id,
+            status=running.status,
+            message="A scan is already running.",
+        )
+
+    run = create_scan_run(db)
+    background_tasks.add_task(_run_scan_in_background, run.id)
     return TriggerScanResponse(
         run_id=run.id,
-        status=run.status,
-        message="Scan finished successfully.",
+        status="running",
+        message="Scan started in the background.",
     )
 
 
 @router.get("/scan/latest", response_model=ScanRunRead)
 def latest_scan(db: Session = Depends(get_db)) -> ScanRunRead:
-    run = db.scalars(select(ScanRun).order_by(ScanRun.started_at.desc())).first()
+    run = get_latest_scan_run(db)
     if run is None:
         raise HTTPException(status_code=404, detail="No scan runs found.")
     return ScanRunRead.model_validate(run)

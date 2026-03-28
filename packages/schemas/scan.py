@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class TriggerScanResponse(BaseModel):
-    run_id: int
+    run_id: int | None = None
     status: str
     message: str
 

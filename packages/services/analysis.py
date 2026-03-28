@@ -10,25 +10,45 @@ from packages.db.models import DailyBar, FeatureSnapshot, PumpEvent, ScanResult,
 from packages.services.data_ingestion import refresh_daily_bars
 
 
-def run_full_scan(db: Session) -> ScanRun:
+def create_scan_run(db: Session) -> ScanRun:
     run = ScanRun(status="running", tickers_scanned=0, candidates_found=0)
     db.add(run)
     db.commit()
     db.refresh(run)
+    return run
+
+
+def get_latest_scan_run(db: Session) -> ScanRun | None:
+    return db.scalars(select(ScanRun).order_by(ScanRun.started_at.desc())).first()
+
+
+def get_running_scan_run(db: Session) -> ScanRun | None:
+    return db.scalars(
+        select(ScanRun).where(ScanRun.status == "running").order_by(ScanRun.started_at.desc())
+    ).first()
+
+
+def run_full_scan(db: Session, run: ScanRun | None = None) -> ScanRun:
+    run = run or create_scan_run(db)
 
     tickers = db.scalars(select(Ticker).where(Ticker.is_active.is_(True))).all()
     refresh_daily_bars(db, tickers)
-    _rebuild_pump_events(db, tickers)
-    _rebuild_positive_snapshots(db, tickers)
-    candidates_found = _build_live_scan_results(db, run.id, tickers)
+    try:
+        _rebuild_pump_events(db, tickers)
+        _rebuild_positive_snapshots(db, tickers)
+        candidates_found = _build_live_scan_results(db, run.id, tickers)
 
-    run.tickers_scanned = len(tickers)
-    run.candidates_found = candidates_found
-    run.status = "completed"
-    run.finished_at = datetime.now(UTC)
-    db.add(run)
-    db.commit()
-    db.refresh(run)
+        run.tickers_scanned = len(tickers)
+        run.candidates_found = candidates_found
+        run.status = "completed"
+    except Exception:
+        run.status = "failed"
+        raise
+    finally:
+        run.finished_at = datetime.now(UTC)
+        db.add(run)
+        db.commit()
+        db.refresh(run)
     return run
 
 
@@ -140,4 +160,3 @@ def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) ->
 
     db.commit()
     return results
-
