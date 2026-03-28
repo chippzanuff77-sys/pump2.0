@@ -319,6 +319,35 @@ h1 {
   gap: 14px;
 }
 
+.quick-flow {
+  margin-top: 2px;
+}
+
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.flow-step {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.flow-step strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--accent-dark);
+}
+
+.flow-step p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -468,6 +497,14 @@ h1 {
   min-height: 340px;
 }
 
+.detail-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
 .chart-meta {
   display: flex;
   justify-content: space-between;
@@ -582,6 +619,7 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .flow-steps,
   .panel-grid {
     grid-template-columns: 1fr;
   }

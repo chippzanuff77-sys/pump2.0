@@ -74,6 +74,27 @@
         </div>
       </section>
 
+      <section class="panel quick-flow">
+        <div class="panel-header">
+          <h2>Recommended Flow</h2>
+          <span id="scan-status-pill" class="badge">ready</span>
+        </div>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <strong>1. Sync universe</strong>
+            <p>Run a scan so the app fetches tickers and fresh daily bars.</p>
+          </div>
+          <div class="flow-step">
+            <strong>2. Review signals</strong>
+            <p>Check top-ranked names and see which pre-pump windows matched.</p>
+          </div>
+          <div class="flow-step">
+            <strong>3. Drill into a ticker</strong>
+            <p>Open a ticker page to inspect price history, features, and closest historical cases.</p>
+          </div>
+        </div>
+      </section>
+
       <section class="metrics-grid">
         <article class="metric-card highlight">
           <span>Total Tickers</span>
@@ -190,6 +211,7 @@
       document.getElementById("run-started").textContent = formatDate(summary.latest_run_started_at);
       document.getElementById("run-finished").textContent = formatDate(summary.latest_run_finished_at);
       document.getElementById("run-badge").textContent = summary.latest_run_status ?? "no runs yet";
+      document.getElementById("scan-status-pill").textContent = summary.latest_run_status ?? "ready";
     }
 
     function renderSignals(rows) {
@@ -212,6 +234,10 @@
           </td>
         </tr>
       `).join("");
+
+      if (!document.getElementById("ticker-input").value && rows[0]?.symbol) {
+        loadTicker(rows[0].symbol);
+      }
     }
 
     function renderRuns(rows) {
@@ -300,6 +326,10 @@
           </div>
           ${buildPriceChartSvg(bars)}
         </div>
+        <div class="detail-cta-row">
+          <a class="primary-button" href="/ticker/${ticker.symbol}">Open Full Research View</a>
+          <span class="muted-text">Jump into the detailed page for matched cases and feature snapshot.</span>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -387,6 +417,7 @@
     async function runScan() {
       const buttons = [document.getElementById("run-scan"), document.getElementById("run-scan-sidebar")];
       const originals = buttons.map((button) => button.textContent);
+      document.getElementById("scan-status-pill").textContent = "starting";
       buttons.forEach((button) => {
         button.disabled = true;
         button.textContent = "Starting...";
@@ -395,11 +426,13 @@
       try {
         const response = await fetchJson("/api/scan/run", { method: "POST" });
         document.getElementById("run-badge").textContent = response.status;
+        document.getElementById("scan-status-pill").textContent = response.status;
         if (response.status === "running") {
           startPolling();
         }
         await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
       } catch (error) {
+        document.getElementById("scan-status-pill").textContent = "failed";
         alert(`Scan failed: ${error.message}`);
       } finally {
         buttons.forEach((button, index) => {
