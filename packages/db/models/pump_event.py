@@ -25,4 +25,6 @@ class PumpEvent(Base):
     feature_snapshots = relationship(
         "FeatureSnapshot", back_populates="event", cascade="all, delete-orphan"
     )
-
+    pattern_snapshots = relationship(
+        "PatternSnapshot", back_populates="event", cascade="all, delete-orphan"
+    )

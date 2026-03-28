@@ -1,14 +1,16 @@
 :root {
-  --bg: #09111d;
-  --panel: rgba(17, 28, 47, 0.88);
-  --panel-2: rgba(10, 19, 34, 0.72);
-  --text: #eef4ff;
-  --muted: #93a5c6;
-  --line: rgba(145, 170, 214, 0.18);
-  --accent: #2ec4b6;
-  --accent-2: #ff9f1c;
+  --bg: #eef3f8;
+  --bg-2: #dde7f0;
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-2: rgba(245, 249, 252, 0.96);
+  --text: #132238;
+  --muted: #5f7089;
+  --line: rgba(98, 121, 153, 0.16);
+  --accent: #00639a;
+  --accent-2: #e88d00;
   --danger: #ff6b6b;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  --shadow: 0 8px 28px rgba(22, 38, 63, 0.12);
+  --shadow-strong: 0 18px 48px rgba(22, 38, 63, 0.16);
 }
 
 * {
@@ -17,17 +19,71 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: "Segoe UI", "Roboto", "Trebuchet MS", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(46, 196, 182, 0.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(255, 159, 28, 0.14), transparent 26%),
-    linear-gradient(180deg, #06101b 0%, #0b1423 100%);
+    radial-gradient(circle at top left, rgba(0, 99, 154, 0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(232, 141, 0, 0.1), transparent 24%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
   min-height: 100vh;
 }
 
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(16px);
+  background: rgba(238, 243, 248, 0.82);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+  width: calc(100vw - 48px);
+  margin: 0 auto;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-block strong {
+  display: block;
+  font-size: 15px;
+}
+
+.brand-block p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), #2d86b7);
+  box-shadow: var(--shadow);
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .shell {
-  width: min(1280px, calc(100vw - 32px));
+  width: calc(100vw - 48px);
   margin: 0 auto;
   padding: 32px 0 48px;
 }
@@ -36,7 +92,7 @@ body {
 .panel,
 .metric-card {
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: 20px;
   background: var(--panel);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
@@ -46,8 +102,9 @@ body {
   display: flex;
   gap: 24px;
   justify-content: space-between;
-  padding: 28px;
+  padding: 32px;
   align-items: end;
+  box-shadow: var(--shadow-strong);
 }
 
 .eyebrow {
@@ -76,6 +133,7 @@ h1 {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 button,
@@ -91,28 +149,33 @@ a:hover {
 .primary-button,
 .secondary-button,
 .ghost-button {
-  border: 0;
   border-radius: 999px;
-  padding: 12px 18px;
+  padding: 12px 20px;
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
 }
 
 .primary-button {
-  background: linear-gradient(135deg, var(--accent), #1ca79a);
-  color: #05211d;
-  font-weight: 700;
+  border: 0;
+  background: linear-gradient(135deg, var(--accent), #1f79af);
+  color: white;
+  box-shadow: 0 6px 20px rgba(0, 99, 154, 0.24);
 }
 
 .secondary-button {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.75);
   color: var(--text);
   border: 1px solid var(--line);
 }
 
 .ghost-button {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.45);
   color: var(--muted);
   border: 1px solid var(--line);
 }
@@ -125,11 +188,11 @@ a:hover {
 }
 
 .metrics-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
 }
 
 .panel-grid {
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr);
 }
 
 .panel-grid .wide {
@@ -137,7 +200,7 @@ a:hover {
 }
 
 .metric-card {
-  padding: 18px 20px;
+  padding: 22px 24px;
 }
 
 .metric-card span {
@@ -147,11 +210,12 @@ a:hover {
 }
 
 .metric-card strong {
-  font-size: 32px;
+  font-size: 34px;
+  font-weight: 700;
 }
 
 .panel {
-  padding: 22px;
+  padding: 24px;
   min-width: 0;
 }
 
@@ -171,7 +235,7 @@ a:hover {
 .badge {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(46, 196, 182, 0.14);
+  background: rgba(0, 99, 154, 0.1);
   color: var(--accent);
   font-size: 12px;
   text-transform: uppercase;
@@ -209,10 +273,12 @@ a:hover {
   flex: 1;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
   color: var(--text);
-  padding: 12px 14px;
+  padding: 14px 16px;
+  min-height: 52px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .ticker-detail.empty {
@@ -243,7 +309,7 @@ a:hover {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--panel-2);
-  padding: 14px;
+  padding: 16px;
   margin-bottom: 16px;
 }
 
@@ -282,21 +348,25 @@ a:hover {
 table {
   width: 100%;
   border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.38);
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 th,
 td {
-  padding: 12px 10px;
+  padding: 14px 12px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
 }
 
 th {
-  color: var(--muted);
+  color: var(--accent);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  background: rgba(0, 99, 154, 0.05);
 }
 
 .ticker-link {
@@ -328,6 +398,7 @@ th {
   border-radius: 18px;
   padding: 14px;
   background: var(--panel-2);
+  box-shadow: var(--shadow);
 }
 
 .run-top {
@@ -351,7 +422,6 @@ th {
 }
 
 @media (max-width: 980px) {
-  .hero,
   .panel-grid {
     grid-template-columns: 1fr;
   }
@@ -364,12 +434,22 @@ th {
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .topbar-inner,
+  .shell {
+    width: calc(100vw - 28px);
+  }
 }
 
 @media (max-width: 640px) {
   .shell {
-    width: min(100vw - 20px, 1280px);
+    width: calc(100vw - 20px);
     padding: 18px 0 28px;
+  }
+
+  .topbar-inner {
+    width: calc(100vw - 20px);
+    min-height: 64px;
   }
 
   .hero,
@@ -384,5 +464,9 @@ th {
 
   .ticker-form {
     flex-direction: column;
+  }
+
+  .topbar-actions {
+    display: none;
   }
 }

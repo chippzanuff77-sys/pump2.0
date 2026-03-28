@@ -6,8 +6,16 @@ from sqlalchemy.orm import Session
 from packages.core.event_detection.detector import PumpEventDetector
 from packages.core.feature_engine.extractor import FeatureExtractor
 from packages.core.similarity.scorer import FEATURE_KEYS, euclidean_similarity, rule_based_score
-from packages.db.models import DailyBar, FeatureSnapshot, PumpEvent, ScanResult, ScanRun, Ticker
+from packages.db.models import DailyBar, FeatureSnapshot, PatternSnapshot, PumpEvent, ScanResult, ScanRun, Ticker
 from packages.services.data_ingestion import refresh_daily_bars
+
+HISTORICAL_WINDOWS = {
+    "pre_30": 30,
+    "pre_10": 10,
+    "pre_5": 5,
+    "pre_1": 1,
+    "trigger_day": 0,
+}
 
 
 def create_scan_run(db: Session) -> ScanRun:
@@ -36,6 +44,7 @@ def run_full_scan(db: Session, run: ScanRun | None = None) -> ScanRun:
     try:
         _rebuild_pump_events(db, tickers)
         _rebuild_positive_snapshots(db, tickers)
+        _rebuild_pattern_library(db, tickers)
         candidates_found = _build_live_scan_results(db, run.id, tickers)
 
         run.tickers_scanned = len(tickers)
@@ -114,18 +123,58 @@ def _rebuild_positive_snapshots(db: Session, tickers: list[Ticker]) -> None:
     db.commit()
 
 
+def _rebuild_pattern_library(db: Session, tickers: list[Ticker]) -> None:
+    extractor = FeatureExtractor()
+    for ticker in tickers:
+        db.execute(delete(PatternSnapshot).where(PatternSnapshot.ticker_id == ticker.id))
+        bars = _bars_frame(db, ticker.id)
+        if bars.empty:
+            continue
+
+        events = db.scalars(select(PumpEvent).where(PumpEvent.ticker_id == ticker.id)).all()
+        for event in events:
+            for window_type, offset in HISTORICAL_WINDOWS.items():
+                reference_candidates = bars.index[bars["date"] == event.trigger_date].tolist()
+                if not reference_candidates:
+                    continue
+
+                reference_idx = reference_candidates[0] - offset
+                if reference_idx < 30 or reference_idx >= len(bars):
+                    continue
+
+                reference_date = bars.iloc[reference_idx]["date"]
+                features = extractor.extract(bars, reference_date)
+                if features is None:
+                    continue
+
+                db.add(
+                    PatternSnapshot(
+                        ticker_id=ticker.id,
+                        event_id=event.id,
+                        reference_date=reference_date,
+                        snapshot_kind="historical",
+                        window_type=window_type,
+                        **features,
+                    )
+                )
+    db.commit()
+
+
 def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) -> int:
     extractor = FeatureExtractor()
     historical = db.scalars(
-        select(FeatureSnapshot).where(FeatureSnapshot.is_positive_case.is_(True))
+        select(PatternSnapshot)
+        .where(PatternSnapshot.snapshot_kind == "historical")
+        .where(PatternSnapshot.window_type != "trigger_day")
     ).all()
-    historical_features = [
-        {key: getattr(snapshot, key) for key in FEATURE_KEYS + ["avg_dollar_volume_20d"]}
-        for snapshot in historical
-    ]
 
     results = 0
     for ticker in tickers:
+        db.execute(
+            delete(PatternSnapshot)
+            .where(PatternSnapshot.ticker_id == ticker.id)
+            .where(PatternSnapshot.snapshot_kind == "live")
+        )
         bars = _bars_frame(db, ticker.id)
         if bars.empty:
             continue
@@ -133,11 +182,33 @@ def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) ->
         if features is None:
             continue
 
-        similarities = [
-            euclidean_similarity(features, historical_row) for historical_row in historical_features
-        ]
-        top_matches = sorted(similarities, reverse=True)[:10]
-        avg_similarity = sum(top_matches) / len(top_matches) if top_matches else 0.0
+        db.add(
+            PatternSnapshot(
+                ticker_id=ticker.id,
+                event_id=None,
+                reference_date=bars.iloc[-1]["date"],
+                snapshot_kind="live",
+                window_type="current",
+                **features,
+            )
+        )
+
+        scored_matches: list[tuple[float, PatternSnapshot]] = []
+        for snapshot in historical:
+            historical_row = {key: getattr(snapshot, key) for key in FEATURE_KEYS}
+            scored_matches.append((euclidean_similarity(features, historical_row), snapshot))
+
+        scored_matches.sort(key=lambda item: item[0], reverse=True)
+        top_matches = scored_matches[:10]
+        top_scores = [score for score, _snapshot in top_matches]
+        window_counts: dict[str, int] = {}
+        matched_symbols: list[str] = []
+        for _score, snapshot in top_matches:
+            window_counts[snapshot.window_type] = window_counts.get(snapshot.window_type, 0) + 1
+            if snapshot.ticker and snapshot.ticker.symbol not in matched_symbols:
+                matched_symbols.append(snapshot.ticker.symbol)
+
+        avg_similarity = sum(top_scores) / len(top_scores) if top_scores else 0.0
         score = rule_based_score(features) + (avg_similarity * 10.0)
 
         db.add(
@@ -146,13 +217,15 @@ def _build_live_scan_results(db: Session, run_id: int, tickers: list[Ticker]) ->
                 ticker_id=ticker.id,
                 score=score,
                 similarity_score=avg_similarity,
-                matched_pattern_count=len([value for value in top_matches if value > 0.15]),
+                matched_pattern_count=len([value for value in top_scores if value > 0.15]),
                 explanation_json={
                     "symbol": ticker.symbol,
                     "top_similarity": round(avg_similarity, 4),
                     "rv_ratio": round(features["rv_ratio"], 4),
                     "breakout_distance": round(features["breakout_distance"], 4),
                     "ret_20d": round(features["ret_20d"], 4),
+                    "matched_symbols": matched_symbols[:5],
+                    "window_counts": window_counts,
                 },
             )
         )

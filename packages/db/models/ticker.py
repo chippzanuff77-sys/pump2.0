@@ -19,5 +19,7 @@ class Ticker(Base):
     feature_snapshots = relationship(
         "FeatureSnapshot", back_populates="ticker", cascade="all, delete-orphan"
     )
+    pattern_snapshots = relationship(
+        "PatternSnapshot", back_populates="ticker", cascade="all, delete-orphan"
+    )
     scan_results = relationship("ScanResult", back_populates="ticker", cascade="all, delete-orphan")
-

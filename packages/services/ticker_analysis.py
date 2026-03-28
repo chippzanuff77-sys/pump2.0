@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from packages.core.feature_engine.extractor import FeatureExtractor
 from packages.core.similarity.scorer import FEATURE_KEYS, euclidean_similarity
-from packages.db.models import DailyBar, FeatureSnapshot, PumpEvent, Ticker
+from packages.db.models import DailyBar, PatternSnapshot, PumpEvent, Ticker
 
 
 @dataclass
@@ -55,9 +55,10 @@ def get_similar_historical_cases(
         return []
 
     snapshots = db.scalars(
-        select(FeatureSnapshot)
-        .where(FeatureSnapshot.is_positive_case.is_(True))
-        .order_by(FeatureSnapshot.reference_date.desc())
+        select(PatternSnapshot)
+        .where(PatternSnapshot.snapshot_kind == "historical")
+        .where(PatternSnapshot.window_type != "trigger_day")
+        .order_by(PatternSnapshot.reference_date.desc())
     ).all()
 
     cases: list[SimilarCase] = []
