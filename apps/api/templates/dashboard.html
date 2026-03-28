@@ -7,116 +7,160 @@
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand-block">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
         <span class="brand-mark">PS</span>
-        <div>
-          <strong>Historical Pump Scanner</strong>
-          <p>Pattern research and live candidate ranking</p>
+        <div class="brand-text">
+          <strong>Donezo</strong>
+          <p>Scanner workspace</p>
         </div>
       </div>
-      <nav class="topbar-actions">
-        <a class="secondary-button" href="/docs" target="_blank" rel="noreferrer">API Docs</a>
+
+      <span class="sidebar-section-label">Menu</span>
+      <nav class="sidebar-nav">
+        <a class="nav-link active" href="/"><span class="nav-dot"></span>Dashboard</a>
+        <a class="nav-link" href="/docs" target="_blank" rel="noreferrer"><span class="nav-dot"></span>API Docs</a>
+        <a class="nav-link" href="/ticker/NVDA"><span class="nav-dot"></span>Ticker View</a>
       </nav>
-    </div>
-  </header>
-  <main class="shell">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Historical Pump Pattern Scanner</p>
-        <h1>Research pre-pump behavior, rank live candidates, and explain every signal.</h1>
-        <p class="lede">
-          Track historical x2 events, inspect current top setups, and launch a fresh market scan
-          directly from the dashboard.
-        </p>
+
+      <span class="sidebar-section-label">General</span>
+      <nav class="sidebar-nav">
+        <a class="nav-link" href="#signals"><span class="nav-dot"></span>Signals</a>
+        <a class="nav-link" href="#runs"><span class="nav-dot"></span>Runs</a>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+
+      <section class="sidebar-promo">
+        <h3>Scanner<br>Engine</h3>
+        <p>Universe sync, historical pump library, and live pattern ranking in one place.</p>
+        <button id="run-scan-sidebar" class="primary-button">Run Scan</button>
+      </section>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div class="search-card">
+          <div class="search-pill">Search ticker, case, or signal explanation</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="mini-action" type="button">?</button>
+          <button class="mini-action" type="button">!</button>
+          <div class="profile-card">
+            <span class="avatar">PS</span>
+            <div>
+              <strong>Scanner Operator</strong>
+              <span>pattern-engine@research.local</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="hero-actions">
-        <button id="run-scan" class="primary-button">Run Full Scan</button>
-        <a class="secondary-button" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
-      </div>
-    </section>
 
-    <section class="metrics-grid">
-      <article class="metric-card">
-        <span>Total Tickers</span>
-        <strong id="ticker-count">{{ summary.ticker_count }}</strong>
-      </article>
-      <article class="metric-card">
-        <span>Historical Pump Events</span>
-        <strong id="event-count">{{ summary.event_count }}</strong>
-      </article>
-      <article class="metric-card">
-        <span>Latest Candidates</span>
-        <strong id="candidate-count">{{ summary.latest_run_candidates }}</strong>
-      </article>
-      <article class="metric-card">
-        <span>Top Score</span>
-        <strong id="top-score">{{ "%.2f"|format(summary.top_score) }}</strong>
-      </article>
-    </section>
+      <section class="hero">
+        <div class="hero-head">
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1>Historical Pump Research</h1>
+            <p class="lede">
+              Build a pre-pump library from historical x2 moves, compare current names against it,
+              and inspect why a ticker ranks today.
+            </p>
+          </div>
+          <div class="hero-actions">
+            <button id="run-scan" class="primary-button">Run Full Scan</button>
+            <a class="secondary-button" href="/docs" target="_blank" rel="noreferrer">Import Data</a>
+          </div>
+        </div>
+      </section>
 
-    <section class="panel-grid">
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Latest Run</h2>
-          <span id="run-badge" class="badge">{{ summary.latest_run_status or "no runs yet" }}</span>
-        </div>
-        <div class="meta-list">
-          <div><span>Run ID</span><strong id="run-id">{{ summary.latest_run_id or "-" }}</strong></div>
-          <div><span>Started</span><strong id="run-started">{{ summary.latest_run_started_at or "-" }}</strong></div>
-          <div><span>Finished</span><strong id="run-finished">{{ summary.latest_run_finished_at or "-" }}</strong></div>
-        </div>
-      </article>
+      <section class="metrics-grid">
+        <article class="metric-card highlight">
+          <span>Total Tickers</span>
+          <strong id="ticker-count">{{ summary.ticker_count }}</strong>
+          <div class="metric-foot">Universe currently available for scanning</div>
+        </article>
+        <article class="metric-card">
+          <span>Historical Pump Events</span>
+          <strong id="event-count">{{ summary.event_count }}</strong>
+          <div class="metric-foot">Detected x2 events in stored history</div>
+        </article>
+        <article class="metric-card">
+          <span>Latest Candidates</span>
+          <strong id="candidate-count">{{ summary.latest_run_candidates }}</strong>
+          <div class="metric-foot">Current names with top setup similarity</div>
+        </article>
+        <article class="metric-card">
+          <span>Top Score</span>
+          <strong id="top-score">{{ "%.2f"|format(summary.top_score) }}</strong>
+          <div class="metric-foot">Highest score from latest completed run</div>
+        </article>
+      </section>
 
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Ticker Explorer</h2>
-        </div>
-        <form id="ticker-form" class="ticker-form">
-          <input id="ticker-input" type="text" placeholder="Enter ticker, e.g. NVDA" maxlength="12">
-          <button type="submit" class="secondary-button">Load</button>
-        </form>
-        <div id="ticker-detail" class="ticker-detail empty">
-          Enter a ticker to see its stats, recent price trend, and historical pump events.
-        </div>
-      </article>
-    </section>
+      <section class="panel-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Latest Run</h2>
+            <span id="run-badge" class="badge">{{ summary.latest_run_status or "no runs yet" }}</span>
+          </div>
+          <div class="meta-list">
+            <div><span>Run ID</span><strong id="run-id">{{ summary.latest_run_id or "-" }}</strong></div>
+            <div><span>Started</span><strong id="run-started">{{ summary.latest_run_started_at or "-" }}</strong></div>
+            <div><span>Finished</span><strong id="run-finished">{{ summary.latest_run_finished_at or "-" }}</strong></div>
+          </div>
+        </article>
 
-    <section class="panel-grid">
-      <article class="panel wide">
-        <div class="panel-header">
-          <h2>Top Live Signals</h2>
-          <button id="refresh-signals" class="ghost-button">Refresh</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Score</th>
-                <th>Similarity</th>
-                <th>Patterns</th>
-                <th>Signal Notes</th>
-              </tr>
-            </thead>
-            <tbody id="signals-body">
-              <tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Ticker Explorer</h2>
+            <span class="badge">Live</span>
+          </div>
+          <form id="ticker-form" class="ticker-form">
+            <input id="ticker-input" type="text" placeholder="Enter ticker, e.g. NVDA" maxlength="12">
+            <button type="submit" class="secondary-button">Load</button>
+          </form>
+          <div id="ticker-detail" class="ticker-detail empty">
+            Enter a ticker to see its stats, recent price trend, and historical pump events.
+          </div>
+        </article>
+      </section>
 
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Recent Runs</h2>
-        </div>
-        <div id="runs-list" class="run-list">
-          <p class="muted-text">No runs yet.</p>
-        </div>
-      </article>
-    </section>
-  </main>
+      <section class="panel-grid">
+        <article class="panel" id="signals">
+          <div class="panel-header">
+            <h2>Top Live Signals</h2>
+            <button id="refresh-signals" class="ghost-button">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticker</th>
+                  <th>Score</th>
+                  <th>Similarity</th>
+                  <th>Patterns</th>
+                  <th>Signal Notes</th>
+                </tr>
+              </thead>
+              <tbody id="signals-body">
+                <tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel" id="runs">
+          <div class="panel-header">
+            <h2>Recent Runs</h2>
+            <span class="badge">History</span>
+          </div>
+          <div id="runs-list" class="run-list">
+            <p class="muted-text">No runs yet.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
 
   <script>
     async function fetchJson(url, options = {}) {
@@ -162,19 +206,9 @@
           <td>${Number(row.similarity_score).toFixed(4)}</td>
           <td>${row.matched_pattern_count}</td>
           <td>
-            <div class="signal-note">
-              <strong>Score:</strong>
-              rule ${row.explanation_json.score_breakdown?.rule_score ?? "-"},
-              sim ${row.explanation_json.score_breakdown?.similarity_component ?? "-"}
-            </div>
-            <div class="signal-note">
-              <strong>Windows:</strong>
-              ${Object.entries(row.explanation_json.window_counts ?? {}).map(([key, value]) => `${key}(${value})`).join(", ") || "-"}
-            </div>
-            <div class="signal-note">
-              <strong>Matches:</strong>
-              ${(row.explanation_json.matched_symbols ?? []).join(", ") || "-"}
-            </div>
+            <div class="signal-note"><strong>Score:</strong> rule ${row.explanation_json.score_breakdown?.rule_score ?? "-"}, sim ${row.explanation_json.score_breakdown?.similarity_component ?? "-"}</div>
+            <div class="signal-note"><strong>Windows:</strong> ${Object.entries(row.explanation_json.window_counts ?? {}).map(([key, value]) => `${key}(${value})`).join(", ") || "-"}</div>
+            <div class="signal-note"><strong>Matches:</strong> ${(row.explanation_json.matched_symbols ?? []).join(", ") || "-"}</div>
           </td>
         </tr>
       `).join("");
@@ -212,24 +246,23 @@
       const min = Math.min(...closes);
       const max = Math.max(...closes);
       const range = Math.max(max - min, 1e-9);
-
       const points = closes.map((value, index) => {
         const x = padding + (index * (width - padding * 2)) / Math.max(closes.length - 1, 1);
         const y = height - padding - ((value - min) / range) * (height - padding * 2);
         return `${x},${y}`;
       }).join(" ");
-
       const fillPoints = `${padding},${height - padding} ${points} ${width - padding},${height - padding}`;
+
       return `
         <svg class="mini-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Price chart">
           <defs>
             <linearGradient id="chartFill" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="rgba(46,196,182,0.45)" />
-              <stop offset="100%" stop-color="rgba(46,196,182,0.02)" />
+              <stop offset="0%" stop-color="rgba(31,122,70,0.35)" />
+              <stop offset="100%" stop-color="rgba(31,122,70,0.02)" />
             </linearGradient>
           </defs>
           <polygon points="${fillPoints}" fill="url(#chartFill)"></polygon>
-          <polyline points="${points}" fill="none" stroke="#2ec4b6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <polyline points="${points}" fill="none" stroke="#1f7a46" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
         </svg>
       `;
     }
@@ -239,7 +272,7 @@
       container.classList.remove("empty");
 
       const eventsHtml = events.length
-        ? events.slice(0, 8).map((event) => `
+        ? events.slice(0, 6).map((event) => `
             <tr>
               <td>${event.trigger_date}</td>
               <td>${event.return_pct.toFixed(2)}%</td>
@@ -352,10 +385,12 @@
     }
 
     async function runScan() {
-      const button = document.getElementById("run-scan");
-      const original = button.textContent;
-      button.disabled = true;
-      button.textContent = "Starting...";
+      const buttons = [document.getElementById("run-scan"), document.getElementById("run-scan-sidebar")];
+      const originals = buttons.map((button) => button.textContent);
+      buttons.forEach((button) => {
+        button.disabled = true;
+        button.textContent = "Starting...";
+      });
 
       try {
         const response = await fetchJson("/api/scan/run", { method: "POST" });
@@ -367,12 +402,15 @@
       } catch (error) {
         alert(`Scan failed: ${error.message}`);
       } finally {
-        button.disabled = false;
-        button.textContent = original;
+        buttons.forEach((button, index) => {
+          button.disabled = false;
+          button.textContent = originals[index];
+        });
       }
     }
 
     document.getElementById("run-scan").addEventListener("click", runScan);
+    document.getElementById("run-scan-sidebar").addEventListener("click", runScan);
     document.getElementById("refresh-signals").addEventListener("click", async () => {
       await Promise.all([loadSummary(), loadSignals(), loadRuns()]);
     });
