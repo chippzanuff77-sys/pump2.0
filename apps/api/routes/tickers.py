@@ -9,6 +9,7 @@ from packages.db.models.ticker import Ticker
 from packages.schemas.bar import DailyBarRead
 from packages.schemas.event import PumpEventRead
 from packages.schemas.ticker import TickerDetail, TickerRead
+from packages.services.ticker_analysis import get_current_feature_snapshot, get_similar_historical_cases
 
 router = APIRouter(tags=["tickers"])
 
@@ -83,3 +84,18 @@ def get_ticker_bars(symbol: str, limit: int = 90, db: Session = Depends(get_db))
         )
         for row in ordered
     ]
+
+
+@router.get("/tickers/{symbol}/analysis")
+def get_ticker_analysis(symbol: str, db: Session = Depends(get_db)) -> dict:
+    ticker = db.scalars(select(Ticker).where(Ticker.symbol == symbol.upper())).first()
+    if ticker is None:
+        raise HTTPException(status_code=404, detail="Ticker not found.")
+
+    features = get_current_feature_snapshot(db, ticker.id)
+    similar_cases = get_similar_historical_cases(db, ticker.id, features)
+    return {
+        "symbol": ticker.symbol,
+        "current_features": features or {},
+        "similar_cases": similar_cases,
+    }

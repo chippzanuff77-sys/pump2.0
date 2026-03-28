@@ -143,7 +143,7 @@
 
       tbody.innerHTML = rows.map((row) => `
         <tr>
-          <td><button class="ticker-link" data-symbol="${row.symbol}">${row.symbol}</button></td>
+          <td><a class="ticker-link-anchor" href="/ticker/${row.symbol}">${row.symbol}</a></td>
           <td>${Number(row.score).toFixed(2)}</td>
           <td>${Number(row.similarity_score).toFixed(4)}</td>
           <td>${row.matched_pattern_count}</td>
@@ -154,10 +154,6 @@
           </td>
         </tr>
       `).join("");
-
-      document.querySelectorAll(".ticker-link").forEach((button) => {
-        button.addEventListener("click", () => loadTicker(button.dataset.symbol));
-      });
     }
 
     function renderRuns(rows) {
