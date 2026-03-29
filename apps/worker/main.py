@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 def run_cycle() -> None:
     with SessionLocal() as db:
         bootstrap_universe(db)
-        run = run_full_scan(db)
+        run = run_full_scan(db, reset_before_run=True)
         logger.info("Completed scan run", extra={"run_id": run.id, "status": run.status})
 
 

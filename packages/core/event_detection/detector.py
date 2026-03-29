@@ -19,7 +19,7 @@ class PumpEventCandidate:
 class PumpEventDetector:
     def __init__(
         self,
-        pump_multiplier: float = 2.0,
+        pump_multiplier: float = 4.0,
         base_lookback_days: int = 60,
         lookahead_days: int = 20,
     ) -> None:
@@ -70,4 +70,3 @@ class PumpEventDetector:
             last_peak_idx = peak_idx
 
         return results
-

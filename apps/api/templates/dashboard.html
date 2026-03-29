@@ -105,7 +105,7 @@
         <article class="metric-card">
           <span>Historical Pump Events</span>
           <strong id="event-count">{{ summary.event_count }}</strong>
-          <div class="metric-foot">Detected x2 events in stored history</div>
+          <div class="metric-foot">Detected x{{ settings.pump_multiplier|int }} events in stored history</div>
         </article>
         <article class="metric-card">
           <span>Latest Candidates</span>

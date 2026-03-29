@@ -16,6 +16,7 @@ from packages.services.analysis import (
     create_scan_run,
     get_latest_scan_run,
     get_running_scan_run,
+    reset_system_state,
     run_full_scan,
 )
 
@@ -30,6 +31,11 @@ def _run_scan_in_background(run_id: int) -> None:
         run_full_scan(db, run=run)
 
 
+def _reset_and_run_scan_in_background() -> None:
+    with SessionLocal() as db:
+        run_full_scan(db, reset_before_run=True)
+
+
 @router.post("/scan/run", response_model=TriggerScanResponse)
 def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> TriggerScanResponse:
     running = get_running_scan_run(db)
@@ -40,12 +46,13 @@ def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db
             message="A scan is already running.",
         )
 
+    reset_system_state(db)
     run = create_scan_run(db)
     background_tasks.add_task(_run_scan_in_background, run.id)
     return TriggerScanResponse(
         run_id=run.id,
         status="running",
-        message="Scan started in the background.",
+        message="System reset and x4 scan started in the background.",
     )
 
 

@@ -28,6 +28,17 @@ def create_scan_run(db: Session) -> ScanRun:
     return run
 
 
+def reset_system_state(db: Session) -> None:
+    db.execute(delete(ScanResult))
+    db.execute(delete(ScanRun))
+    db.execute(delete(PatternSnapshot))
+    db.execute(delete(FeatureSnapshot))
+    db.execute(delete(PumpEvent))
+    db.execute(delete(DailyBar))
+    db.execute(delete(Ticker))
+    db.commit()
+
+
 def get_latest_scan_run(db: Session) -> ScanRun | None:
     return db.scalars(select(ScanRun).order_by(ScanRun.started_at.desc())).first()
 
@@ -38,7 +49,14 @@ def get_running_scan_run(db: Session) -> ScanRun | None:
     ).first()
 
 
-def run_full_scan(db: Session, run: ScanRun | None = None) -> ScanRun:
+def run_full_scan(
+    db: Session,
+    run: ScanRun | None = None,
+    reset_before_run: bool = False,
+) -> ScanRun:
+    if reset_before_run:
+        reset_system_state(db)
+
     run = run or create_scan_run(db)
 
     bootstrap_universe(db)

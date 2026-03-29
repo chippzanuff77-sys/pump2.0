@@ -1,6 +1,6 @@
 # Historical Pump Scanner
 
-Railway-ready MVP for scanning US stocks, cataloging historical x2 pump events, extracting pre-pump features, and ranking current tickers by similarity.
+Railway-ready MVP for scanning US stocks, cataloging historical x4 pump events, extracting pre-pump features, and ranking current tickers by similarity.
 
 ## Quick start
 
