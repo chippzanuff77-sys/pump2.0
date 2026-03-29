@@ -2,6 +2,12 @@
 
 Railway-ready MVP for scanning US stocks, cataloging historical x4 pump events, extracting pre-pump features, and ranking current tickers by similarity.
 
+The research defaults are tuned for discovery rather than ultra-short momentum:
+
+- `PUMP_MULTIPLIER=4.0`
+- `PUMP_LOOKAHEAD_DAYS=60`
+- `BAR_HISTORY_YEARS=5`
+
 ## Quick start
 
 1. Copy `.env.example` to `.env`

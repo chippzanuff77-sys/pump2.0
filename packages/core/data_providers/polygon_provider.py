@@ -29,7 +29,7 @@ class PolygonProvider(DailyBarProvider):
         )
 
         with httpx.Client(timeout=self.timeout) as client:
-            while next_url and len(collected) < limit:
+            while next_url and len(collected) < max(limit * 5, 4000):
                 response = client.get(next_url, params={"apiKey": self.api_key})
                 response.raise_for_status()
                 payload = response.json()
@@ -37,17 +37,42 @@ class PolygonProvider(DailyBarProvider):
                     ticker = item.get("ticker")
                     if not ticker:
                         continue
+                    security_type = (item.get("type") or "").upper()
+                    if security_type and security_type not in {"CS", "COMMON_STOCK"}:
+                        continue
                     collected.append(
                         {
                             "symbol": ticker.upper(),
                             "exchange": item.get("primary_exchange") or item.get("market") or "US",
                         }
                     )
-                    if len(collected) >= limit:
+                    if len(collected) >= max(limit * 5, 4000):
                         break
                 next_url = payload.get("next_url")
 
-        return collected[:limit]
+        if len(collected) <= limit:
+            return collected
+
+        step = len(collected) / limit
+        diversified: list[dict[str, str]] = []
+        seen_symbols: set[str] = set()
+        for idx in range(limit):
+            candidate = collected[min(int(idx * step), len(collected) - 1)]
+            if candidate["symbol"] in seen_symbols:
+                continue
+            diversified.append(candidate)
+            seen_symbols.add(candidate["symbol"])
+
+        if len(diversified) < limit:
+            for candidate in collected:
+                if candidate["symbol"] in seen_symbols:
+                    continue
+                diversified.append(candidate)
+                seen_symbols.add(candidate["symbol"])
+                if len(diversified) >= limit:
+                    break
+
+        return diversified[:limit]
 
     def fetch_daily_bars(self, symbol: str, period: str = "2y") -> pd.DataFrame:
         if not self.api_key:

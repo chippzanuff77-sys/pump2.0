@@ -20,18 +20,23 @@ class Settings(BaseSettings):
     market_data_base_url: str = Field(
         default="https://api.massive.com", alias="MARKET_DATA_BASE_URL"
     )
+    universe_sources: str = Field(default="polygon,finviz", alias="UNIVERSE_SOURCES")
     universe_limit: int = Field(default=800, alias="UNIVERSE_LIMIT")
-    bar_history_years: int = Field(default=2, alias="BAR_HISTORY_YEARS")
+    bar_history_years: int = Field(default=5, alias="BAR_HISTORY_YEARS")
     default_universe: str = Field(default="NVDA,TSLA,AMD,PLTR,SOFI", alias="DEFAULT_UNIVERSE")
     min_avg_dollar_volume: float = Field(default=500_000, alias="MIN_AVG_DOLLAR_VOLUME")
     pump_multiplier: float = Field(default=4.0, alias="PUMP_MULTIPLIER")
-    pump_lookahead_days: int = Field(default=20, alias="PUMP_LOOKAHEAD_DAYS")
+    pump_lookahead_days: int = Field(default=60, alias="PUMP_LOOKAHEAD_DAYS")
     pump_base_lookback_days: int = Field(default=60, alias="PUMP_BASE_LOOKBACK_DAYS")
     worker_poll_seconds: int = Field(default=3600, alias="WORKER_POLL_SECONDS")
 
     @property
     def universe_symbols(self) -> list[str]:
         return [symbol.strip().upper() for symbol in self.default_universe.split(",") if symbol.strip()]
+
+    @property
+    def enabled_universe_sources(self) -> list[str]:
+        return [source.strip().lower() for source in self.universe_sources.split(",") if source.strip()]
 
 
 @lru_cache(maxsize=1)
