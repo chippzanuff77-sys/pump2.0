@@ -20,6 +20,7 @@
       <span class="sidebar-section-label">Menu</span>
       <nav class="sidebar-nav">
         <a class="nav-link active" href="/"><span class="nav-dot"></span>Dashboard</a>
+        <a class="nav-link" href="/patterns/common"><span class="nav-dot"></span>Common Patterns</a>
         <a class="nav-link" href="/docs" target="_blank" rel="noreferrer"><span class="nav-dot"></span>API Docs</a>
         <a class="nav-link" href="/ticker/NVDA"><span class="nav-dot"></span>Ticker View</a>
       </nav>
@@ -61,10 +62,10 @@
         <div class="hero-head">
           <div>
             <p class="eyebrow">Dashboard</p>
-            <h1>Historical Pump Research</h1>
+            <h1>x{{ settings.pump_multiplier|int }} Pump Research</h1>
             <p class="lede">
-              Build a pre-pump library from historical x2 moves, compare current names against it,
-              and inspect why a ticker ranks today.
+              Find x{{ settings.pump_multiplier|int }} pumps across the universe, build a pre-pump library from them,
+              compare current names against it, and inspect why a ticker ranks today.
             </p>
           </div>
           <div class="hero-actions">

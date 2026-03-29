@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     bar_history_years: int = Field(default=2, alias="BAR_HISTORY_YEARS")
     default_universe: str = Field(default="NVDA,TSLA,AMD,PLTR,SOFI", alias="DEFAULT_UNIVERSE")
     min_avg_dollar_volume: float = Field(default=500_000, alias="MIN_AVG_DOLLAR_VOLUME")
-    pump_multiplier: float = Field(default=2.0, alias="PUMP_MULTIPLIER")
+    pump_multiplier: float = Field(default=4.0, alias="PUMP_MULTIPLIER")
     pump_lookahead_days: int = Field(default=20, alias="PUMP_LOOKAHEAD_DAYS")
     pump_base_lookback_days: int = Field(default=60, alias="PUMP_BASE_LOOKBACK_DAYS")
     worker_poll_seconds: int = Field(default=3600, alias="WORKER_POLL_SECONDS")

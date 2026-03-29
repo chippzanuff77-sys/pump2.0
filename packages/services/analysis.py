@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from packages.core.event_detection.detector import PumpEventDetector
 from packages.core.feature_engine.extractor import FeatureExtractor
 from packages.core.similarity.scorer import FEATURE_KEYS, euclidean_similarity, rule_based_score
+from packages.config import get_settings
 from packages.db.models import DailyBar, FeatureSnapshot, PatternSnapshot, PumpEvent, ScanResult, ScanRun, Ticker
 from packages.services.bootstrap import bootstrap_universe
 from packages.services.data_ingestion import refresh_daily_bars
@@ -82,7 +83,12 @@ def _bars_frame(db: Session, ticker_id: int):
 
 
 def _rebuild_pump_events(db: Session, tickers: list[Ticker]) -> None:
-    detector = PumpEventDetector()
+    settings = get_settings()
+    detector = PumpEventDetector(
+        pump_multiplier=settings.pump_multiplier,
+        base_lookback_days=settings.pump_base_lookback_days,
+        lookahead_days=settings.pump_lookahead_days,
+    )
     for ticker in tickers:
         db.execute(delete(PumpEvent).where(PumpEvent.ticker_id == ticker.id))
         bars = _bars_frame(db, ticker.id)

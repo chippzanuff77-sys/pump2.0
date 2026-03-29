@@ -6,6 +6,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from apps.api.deps import get_db
+from packages.config import get_settings
+from packages.services.common_patterns import get_common_patterns_summary
 from packages.services.dashboard import get_dashboard_summary
 from packages.services.ticker_analysis import (
     bars_frame,
@@ -27,7 +29,7 @@ def dashboard_home(request: Request, db: Session = Depends(get_db)) -> HTMLRespo
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"summary": summary},
+        context={"summary": summary, "settings": get_settings()},
     )
 
 
@@ -71,5 +73,18 @@ def ticker_detail_page(symbol: str, request: Request, db: Session = Depends(get_
             "events": events,
             "current_features": current_features or {},
             "similar_cases": similar_cases,
+            "settings": get_settings(),
+        },
+    )
+
+
+@router.get("/patterns/common", response_class=HTMLResponse)
+def common_patterns_page(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="common_patterns.html",
+        context={
+            "summary": get_common_patterns_summary(db),
+            "settings": get_settings(),
         },
     )
