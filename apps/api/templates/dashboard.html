@@ -62,10 +62,10 @@
         <div class="hero-head">
           <div>
             <p class="eyebrow">Dashboard</p>
-            <h1>x{{ settings.pump_multiplier|int }} Pump Research</h1>
+            <h1>x{{ settings.pump_multiplier|int }} Pump Research Console</h1>
             <p class="lede">
-              Find x{{ settings.pump_multiplier|int }} pumps across the universe, build a pre-pump library from them,
-              compare current names against it, and inspect why a ticker ranks today.
+              Sync a large stock universe, catalog historical x{{ settings.pump_multiplier|int }} pumps,
+              turn those events into pre-pump windows, and rank today's names against that historical library.
             </p>
           </div>
           <div class="hero-actions">
@@ -75,23 +75,68 @@
         </div>
       </section>
 
+      <section class="pipeline-grid">
+        <article class="pipeline-card">
+          <span class="pipeline-step">01</span>
+          <strong>Universe Sync</strong>
+          <p>Load active tickers and refresh daily bars before any research starts.</p>
+          <div class="pipeline-meta">
+            <span id="pipeline-universe">{{ summary.ticker_count }}</span>
+            <small>tickers currently in the database</small>
+          </div>
+        </article>
+        <article class="pipeline-card">
+          <span class="pipeline-step">02</span>
+          <strong>Historical x{{ settings.pump_multiplier|int }} Catalog</strong>
+          <p>Detect all qualifying pump events first, then study what happened before them.</p>
+          <div class="pipeline-meta">
+            <span id="pipeline-events">{{ summary.event_count }}</span>
+            <small>historical pump events captured</small>
+          </div>
+        </article>
+        <article class="pipeline-card">
+          <span class="pipeline-step">03</span>
+          <strong>Pattern Library</strong>
+          <p>Store `pre_30`, `pre_10`, `pre_5`, and `pre_1` windows for every historical event.</p>
+          <div class="pipeline-meta">
+            <span id="pipeline-status">{{ summary.latest_run_status or "ready" }}</span>
+            <small>latest library build status</small>
+          </div>
+        </article>
+        <article class="pipeline-card accent">
+          <span class="pipeline-step">04</span>
+          <strong>Live Ranking</strong>
+          <p>Compare today's setup against the historical library and explain why it matched.</p>
+          <div class="pipeline-meta">
+            <span id="pipeline-candidates">{{ summary.latest_run_candidates }}</span>
+            <small>current live candidates</small>
+          </div>
+        </article>
+      </section>
+
       <section class="panel quick-flow">
         <div class="panel-header">
-          <h2>Recommended Flow</h2>
+          <h2>Next Best Action</h2>
           <span id="scan-status-pill" class="badge">ready</span>
         </div>
-        <div class="flow-steps">
-          <div class="flow-step">
-            <strong>1. Sync universe</strong>
-            <p>Run a scan so the app fetches tickers and fresh daily bars.</p>
+        <div class="action-strip">
+          <div class="action-copy">
+            <strong id="action-title">Seed the research universe</strong>
+            <p id="action-description">Run a full scan to pull active tickers, build the historical x{{ settings.pump_multiplier|int }} pump catalog, and generate live candidates.</p>
           </div>
-          <div class="flow-step">
-            <strong>2. Review signals</strong>
-            <p>Check top-ranked names and see which pre-pump windows matched.</p>
-          </div>
-          <div class="flow-step">
-            <strong>3. Drill into a ticker</strong>
-            <p>Open a ticker page to inspect price history, features, and closest historical cases.</p>
+          <div class="action-meta">
+            <div class="action-chip">
+              <span>Target universe</span>
+              <strong>{{ settings.universe_limit }}</strong>
+            </div>
+            <div class="action-chip">
+              <span>Pump threshold</span>
+              <strong>x{{ settings.pump_multiplier|int }}</strong>
+            </div>
+            <div class="action-chip">
+              <span>Bar history</span>
+              <strong>{{ settings.bar_history_years }}y</strong>
+            </div>
           </div>
         </div>
       </section>
@@ -100,7 +145,7 @@
         <article class="metric-card highlight">
           <span>Total Tickers</span>
           <strong id="ticker-count">{{ summary.ticker_count }}</strong>
-          <div class="metric-foot">Universe currently available for scanning</div>
+          <div class="metric-foot">Universe currently available for scanning and pattern extraction</div>
         </article>
         <article class="metric-card">
           <span>Historical Pump Events</span>
@@ -130,6 +175,10 @@
             <div><span>Started</span><strong id="run-started">{{ summary.latest_run_started_at or "-" }}</strong></div>
             <div><span>Finished</span><strong id="run-finished">{{ summary.latest_run_finished_at or "-" }}</strong></div>
           </div>
+          <div class="run-callout">
+            <strong id="run-callout-title">Research flow</strong>
+            <p id="run-callout-copy">A full scan resets derived data, rebuilds the x{{ settings.pump_multiplier|int }} event catalog, updates pre-pump windows, and refreshes live rankings.</p>
+          </div>
         </article>
 
         <article class="panel">
@@ -158,14 +207,15 @@
               <thead>
                 <tr>
                   <th>Ticker</th>
-                  <th>Score</th>
+                  <th>Final Score</th>
                   <th>Similarity</th>
-                  <th>Patterns</th>
-                  <th>Signal Notes</th>
+                  <th>Window Match</th>
+                  <th>Why It Ranked</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="signals-body">
-                <tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>
+                <tr><td colspan="6" class="muted-cell">No scan results yet.</td></tr>
               </tbody>
             </table>
           </div>
@@ -213,12 +263,62 @@
       document.getElementById("run-finished").textContent = formatDate(summary.latest_run_finished_at);
       document.getElementById("run-badge").textContent = summary.latest_run_status ?? "no runs yet";
       document.getElementById("scan-status-pill").textContent = summary.latest_run_status ?? "ready";
+      document.getElementById("pipeline-universe").textContent = summary.ticker_count ?? 0;
+      document.getElementById("pipeline-events").textContent = summary.event_count ?? 0;
+      document.getElementById("pipeline-status").textContent = summary.latest_run_status ?? "ready";
+      document.getElementById("pipeline-candidates").textContent = summary.latest_run_candidates ?? 0;
+      updateActionStrip(summary);
+    }
+
+    function updateActionStrip(summary) {
+      const title = document.getElementById("action-title");
+      const description = document.getElementById("action-description");
+      const runTitle = document.getElementById("run-callout-title");
+      const runCopy = document.getElementById("run-callout-copy");
+
+      if ((summary.ticker_count ?? 0) === 0) {
+        title.textContent = "Seed the research universe";
+        description.textContent = "Run a full scan first so the app can import tickers, fetch daily history, and begin building the x{{ settings.pump_multiplier|int }} pump catalog.";
+        runTitle.textContent = "No completed research pass yet";
+        runCopy.textContent = "The first run should load the universe, detect historical x{{ settings.pump_multiplier|int }} events, build pre-pump windows, and create the first live ranking set.";
+        return;
+      }
+
+      if ((summary.event_count ?? 0) === 0) {
+        title.textContent = "Build the historical x{{ settings.pump_multiplier|int }} pump catalog";
+        description.textContent = "You have tickers loaded, but no qualifying historical x{{ settings.pump_multiplier|int }} pumps cataloged yet. The next full scan should focus on event detection and feature extraction.";
+        runTitle.textContent = "Universe loaded, event catalog still thin";
+        runCopy.textContent = "If this stays at zero after a full scan, the issue is likely in event detection, history depth, or the quality of the imported universe.";
+        return;
+      }
+
+      if ((summary.latest_run_candidates ?? 0) === 0) {
+        title.textContent = "Refresh live ranking against the historical library";
+        description.textContent = "Historical x{{ settings.pump_multiplier|int }} pumps exist now. Run another pass to rebuild live snapshots and look for current names with pre-pump similarity.";
+        runTitle.textContent = "Historical library exists";
+        runCopy.textContent = "The scanner can now compare current setups to historical pre_30, pre_10, pre_5, and pre_1 windows to surface today's best matches.";
+        return;
+      }
+
+      title.textContent = "Review top candidates and drill into a ticker";
+      description.textContent = "The scanner has both a historical x{{ settings.pump_multiplier|int }} library and current candidates. Open a ticker detail page to inspect matched windows and closest historical cases.";
+      runTitle.textContent = "Research engine active";
+      runCopy.textContent = "Use the signal table to move from rank to explanation, then validate the setup on the ticker research page and the Common Patterns view.";
+    }
+
+    function dominantWindow(windowCounts) {
+      const entries = Object.entries(windowCounts ?? {});
+      if (!entries.length) return "-";
+      entries.sort((a, b) => b[1] - a[1]);
+      const [windowType, count] = entries[0];
+      const total = entries.reduce((sum, [, value]) => sum + value, 0);
+      return `${windowType} (${count}/${total})`;
     }
 
     function renderSignals(rows) {
       const tbody = document.getElementById("signals-body");
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="muted-cell">No scan results yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="muted-cell">No scan results yet.</td></tr>';
         return;
       }
 
@@ -227,12 +327,13 @@
           <td><a class="ticker-link-anchor" href="/ticker/${row.symbol}">${row.symbol}</a></td>
           <td>${Number(row.score).toFixed(2)}</td>
           <td>${Number(row.similarity_score).toFixed(4)}</td>
-          <td>${row.matched_pattern_count}</td>
+          <td>${dominantWindow(row.explanation_json.window_counts)}</td>
           <td>
-            <div class="signal-note"><strong>Score:</strong> rule ${row.explanation_json.score_breakdown?.rule_score ?? "-"}, sim ${row.explanation_json.score_breakdown?.similarity_component ?? "-"}</div>
-            <div class="signal-note"><strong>Windows:</strong> ${Object.entries(row.explanation_json.window_counts ?? {}).map(([key, value]) => `${key}(${value})`).join(", ") || "-"}</div>
-            <div class="signal-note"><strong>Matches:</strong> ${(row.explanation_json.matched_symbols ?? []).join(", ") || "-"}</div>
+            <div class="signal-note"><strong>Rule score:</strong> ${row.explanation_json.score_breakdown?.rule_score ?? "-"}</div>
+            <div class="signal-note"><strong>Similarity:</strong> ${row.explanation_json.score_breakdown?.similarity_component ?? "-"}</div>
+            <div class="signal-note"><strong>Matched symbols:</strong> ${(row.explanation_json.matched_symbols ?? []).join(", ") || "-"}</div>
           </td>
+          <td><a class="secondary-button table-action" href="/ticker/${row.symbol}">Open Research</a></td>
         </tr>
       `).join("");
 
@@ -255,7 +356,7 @@
             <span class="badge">${run.status}</span>
           </div>
           <p>Tickers scanned: ${run.tickers_scanned}</p>
-          <p>Candidates found: ${run.candidates_found}</p>
+          <p>Live candidates: ${run.candidates_found}</p>
           <p>Started: ${formatDate(run.started_at)}</p>
         </article>
       `).join("");
